@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>商品管理</title>
+<link rel="stylesheet" type="text/css" href="/static/easyui/themes/default/easyui.css">
+<link rel="stylesheet" type="text/css" href="/static/easyui/themes/icon.css">
+<script type="text/javascript" src="/static/easyui/jquery.min.js"></script>
+<script type="text/javascript" src="/static/easyui/jquery.easyui.min.js"></script>
+<script type="text/javascript" src="/static/easyui/locale/easyui-lang-zh_CN.js"></script>
+<script type="text/javascript">
+	
+	
+	$(document).ready(function() {
+		
+		$("#tree").tree({
+			lines:true,
+			url:'/admin/goodsType/loadTreeInfo',
+			onLoadSuccess:function(){
+				$("#tree").tree("expandAll");
+			},
+			onClick:function(node){
+				if(node.attributes.state==0){ // 假如是叶子节点，删除按钮恢复可用
+					$("#del").linkbutton("enable");
+				}else{
+					$("#del").linkbutton("disable");
+				}
+			}
+		});
+		
+	});	
+	
+	
+	
+	$(function(){
+		$('#dg').datagrid({
+			url:'/admin/goods/list',
+		    title:'商品管理',
+		    fitColumns:true,
+		    pagination:true,
+		    rownumbers:true,
+		    toolbar:"#tb",
+		    fit: true,
+		    singleSelect:true,
+		    pageSize:20,
+		    columns:[[
+		        {field:'code',title:'编号',width:50,align:'center'},
+		        {field:'name',title:'商品名称',width:150,align:'center'},
+		        {field:'model',title:'型号',width:60,align:'center'},
+		        {field:'type',title:'类别',width:60,align:'center',
+		        	formatter:function(val,row){
+		        		return val.name;
+				}},
+		        {field:'unit',title:'单位',width:50,align:'center'},
+		        {field:'purchasingPrice',title:'采购价',width:50,align:'center',
+		        	formatter:function(val,row){
+		        		return "￥"+val;
+				}},
+		        {field:'sellingPrice',title:'出售价',width:50,align:'center',
+					formatter:function(val,row){
+		        		return "￥"+val;
+				}},
+		        {field:'minNum',title:'库存下限',width:50,align:'center'},
+		        {field:'producer',title:'生产厂商',width:150,align:'center'}
+		    ]]
+		});
+		
+		$('#ss').searchbox({
+		    searcher:function(value,name){
+		    	$("#dg").datagrid('reload',{
+			    	name:value
+		    	});
+		    },
+		    menu:'#mm', 
+		    prompt:'请输入查询条件'
+		});
+		
+		/* 给表格添加双击事件 */
+		$('#dg').datagrid({
+			onDblClickRow: function(index,row){
+				$("#dlg").dialog("open").dialog("setTitle","修改商品信息");
+				$("#fm").form("load",row);
+				$("#goodsName").attr("readonly","readonly");
+				url="/admin/goods/save?id="+row.id;
+			}
+		});
+		
+	});
+	
+	function save(){
+		$("#fm").form('submit',{
+			 url:url,
+			 onSubmit: function(){
+				 return $(this).form("validate");
+			 },
+			 success:function(result){
+				 var result = eval('('+result+')');
+			     if (result.success){
+			    	 $.messager.alert("系统提示","保存成功！");
+					 resetValue();
+					 $("#dlg").dialog("close");
+					 $("#dg").datagrid("reload");
+			     }else{
+			    	 $.messager.alert("系统提示",result.errorMsg);
+			     }
+			 }
+		});
+	}
+	
+	function resetValue(){
+		$("#goodsName").val("");
+		$("#id").val("");
+		$("#password").textbox('reset');
+		$("#trueName").val("");
+		$("#remarks").textbox('reset');
+	}
+	function cancel(){
+		$("#dlg").dialog("close");
+		resetValue();
+	}
+	
+	function openAddDialog(){
+		$("#goodsName").removeAttr("readonly");
+		$("#dlg").dialog("open").dialog("setTitle","添加商品信息");
+		url="/admin/goods/save";
+	}
+	
+	function openUdateDialog(){
+		var selectedRows=$("#dg").datagrid("getSelections");
+		if(selectedRows.length!=1){
+			$.messager.alert("系统提示","请选择一条要修改的数据！");
+			return;
+		}
+		var row=selectedRows[0];
+		$("#dlg").dialog("open").dialog("setTitle","修改商品信息");
+		$("#fm").form("load",row);
+		$("#goodsName").attr("readonly","readonly");
+		url="/admin/goods/save?id="+row.id;
+	}
+	
+	function deleteUser(){
+		var selectedRows=$("#dg").datagrid("getSelections");
+		if(selectedRows.length!=1){
+			$.messager.alert("系统提示","请选择一条要删除的数据！");
+			return;
+		}
+		var id=selectedRows[0].id;
+		$.messager.confirm('系统提示','您确定要删除这条数据吗？',function(r){
+		    if (r){
+		    	$.post("/admin/goods/delete",{id:id},function(result){
+		    		if(result.success){
+		    			$.messager.alert('系统提示','删除成功');
+		    			$("#dg").datagrid("reload");
+		    		}else{
+		    			$.messager.alert('系统提示',result.errorMsg);
+		    		}
+		    	},'json');
+		    }
+		});
+	}
+	
+	
+	
+	/* 商品类别的添加和删除 */
+	function openGoodsTypeAddDialog(){
+		$("#dlg").dialog("open").dialog("setTitle","新增商品类别");
+	}
+	
+	function deleteGoodsType(){
+		var node=$("#tree").tree("getSelected"); // 获取选中节点
+		var id=node.id;
+		$.post("/admin/goodsType/delete",{id:id},function(result){
+			if(result.success){
+				$("#tree").tree("reload");
+				$("#del").linkbutton("disable");
+			}else{
+				$.messager.alert("系统提示",result.errorInfo);
+			}
+		},"json");
+	}
+	
+	function saveGoodsType(){
+		if(!$("#fm").form("validate")){
+			return;
+		}
+		var goodsTypeName=$('#goodsTypeName').val();
+		var node=$("#tree").tree("getSelected"); // 获取选中节点
+		var parentId;
+		if(node==null){
+			parentId=1;
+		}else{
+			parentId=node.id;
+		}
+		$.post("/admin/goodsType/save",{name:goodsTypeName,parentId:parentId},function(result){
+			if(result.success){
+				$("#tree").tree("reload");
+				closeGoodsTypeDialog();
+			}else{
+				$.messager.alert("系统提示","提交失败，请联系管理员！");
+			}
+		},"json");
+	}
+	
+	function closeGoodsTypeDialog(){
+		$("#dlg").dialog("close");
+		$('#goodsTypeName').val('');
+	}
+</script>
+</head>
+<body class="easyui-layout" style="padding-top: 2px">
+	<div data-options="region:'west',collapsible:false" style="width: 180px" title="商品类别" split=true>
+		<ul id="tree" class="easyui-tree" style="padding: 10px"></ul>
+		<div style="position: absolute;bottom: 10px;left: 15px">
+			<a href="javascript:openGoodsTypeAddDialog()" class="easyui-linkbutton" iconCls="icon-add" >新增</a>
+			<a id="del"  href="javascript:deleteGoodsType()" class="easyui-linkbutton" disabled=true iconCls="icon-remove">删除</a>
+		</div>
+	</div>
+	<div data-options="region:'center'">
+		<table id="dg"></table>
+		<div id="tb" style="padding: 5px 1px;">
+			<a href="javascript:openAddDialog()" class="easyui-linkbutton" data-options="iconCls:'icon-add'" plain="true">添加</a>
+			<a href="javascript:openUdateDialog()" class="easyui-linkbutton" data-options="iconCls:'icon-edit'" plain="true">修改</a>
+			<a href="javascript:deleteUser()" class="easyui-linkbutton" data-options="iconCls:'icon-remove'" plain="true">删除</a>
+			<input id="ss" style="width:300px;"></input>
+			<div id="mm">
+			    <div data-options="name:'name'">商品名称</div>
+			</div> 
+		</div>
+		
+		<div id="dlg" class="easyui-dialog" style="width: 300px;height: 120px;padding: 10px 20px"
+			closed="true" buttons="#dlg-buttons" data-options="onClose:function(){$('#goodsTypeName').val('');}">
+			<form id="fm" method="post">
+				<div>
+					商品类别：&nbsp;<input type="text" id="goodsTypeName" name="goodsTypeName" class="easyui-validatebox" required="true"/>
+				</div>
+			</form>
+		</div>
+		
+		<div id="dlg-buttons">
+			<a href="javascript:saveGoodsType()" class="easyui-linkbutton" iconCls="icon-ok" >保存</a>
+			<a href="javascript:closeGoodsTypeDialog()" class="easyui-linkbutton" iconCls="icon-cancel" >关闭</a>
+		</div>
+	</div>
+	
+</body>
+</html>

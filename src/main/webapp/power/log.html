@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+
+<link rel="stylesheet" type="text/css" href="/static/easyui/themes/default/easyui.css">
+<link rel="stylesheet" type="text/css" href="/static/easyui/themes/icon.css">
+<script type="text/javascript" src="/static/easyui/jquery.min.js"></script>
+<script type="text/javascript" src="/static/easyui/jquery.easyui.min.js"></script>
+<script type="text/javascript" src="/static/easyui/locale/easyui-lang-zh_CN.js"></script>
+
+<title>角色管理</title>
+<script type="text/javascript">
+		
+	var url;
+		
+	$(function(){
+		$('#dg').datagrid({
+			url:'/admin/log/list',
+		    title:'日志管理',
+		    fitColumns:true,
+		    pagination:true,
+		    rownumbers:true,
+		    toolbar:"#tb",
+		    fit: true,
+		    singleSelect:true,
+		    pageSize:20,
+		    columns:[[
+			        {field:'id',title:'编号',width:20,align:'center'},
+			        {field:'name',title:'操作类型',width:50,align:'center'},
+			        {field:'operateTime',title:'操作时间',width:100,align:'center'},
+		        	{field:'user',title:'操作者',width:80,align:'center',
+		        	formatter:function(val,row){
+		        		return val.trueName+"&nbsp;&nbsp;("+val.userName+")&nbsp;";
+					}},
+			        {field:'content',title:'操作内容',width:350,align:'left'}
+		    ]]
+		});
+		
+		
+	});
+	
+		
+	
+	function searchLog(){
+		$("#dg").datagrid('load',{
+			"name":$("#s_type").combobox("getValue"),
+			"user.trueName":$("#s_trueName").val(),
+			"btime":$("#s_btime").datetimebox("getValue"),
+			"etime":$("#s_etime").datetimebox("getValue")
+		});
+	}
+
+	function resetValue(){
+		$("#s_type").combobox("setValue","");
+		$("#s_trueName").val("");
+		$("#s_btime").datetimebox("setValue","");
+		$("#s_etime").datetimebox("setValue","");
+	}
+	
+</script>
+</head>
+<body>
+	<table id="dg"></table>
+	
+	<div id="tb">
+		<fieldset style="border-color: #E7F0FF">
+			<legend>查询设置</legend>
+			&nbsp;查询设置&nbsp;
+			<select class="easyui-combobox" id="s_type" style="width: 154px" editable="false" panelHeight="auto">
+				<option value="">所有类型</option>
+				<option value="登录操作">登录操作</option>
+				<option value="注销操作">注销操作</option>
+				<option value="查询操作">查询操作</option>
+				<option value="更新操作">更新操作</option>
+				<option value="添加操作">添加操作</option>
+				<option value="删除操作">删除操作</option>
+			</select>
+			&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;操作用户：&nbsp;
+			<input type="text" id="s_trueName" size="20" onkeydown="if(event.keyCode==13) searchLog()"/>
+			&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;操作时间：&nbsp;
+			<input id="s_btime" class="easyui-datetimebox" editable=false style="width:150px"/>
+			&nbsp;&nbsp;-&nbsp;&nbsp;
+			<input id="s_etime" class="easyui-datetimebox" editable=false style="width:150px"/>
+			&nbsp;&nbsp;<a href="javascript:searchLog()" class="easyui-linkbutton" iconCls="icon-search" plain="true">搜索</a>
+			&nbsp;&nbsp;<a href="javascript:resetValue()" class="easyui-linkbutton" iconCls="icon-reset" plain="true">重置</a>
+		</fieldset>
+	</div>
+	
+	
+</body>
+</html>
